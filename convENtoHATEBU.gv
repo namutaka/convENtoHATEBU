@@ -1,32 +1,56 @@
 /**
  * EverNoteエクスポートデータを、はてブインポートデータ(ATOM)に変換する
+ *
+ * 使い方例
+ *  groovy convENtoHATEBU.gv evernote.enex > hatebu.atom
  */
 
-import java.text.*
+//ISO8601用の日時フォーマット
+import org.apache.commons.lang.time.DateFormatUtils
+def format = DateFormatUtils.ISO_DATETIME_TIME_ZONE_FORMAT
 
 
 //引数からEvernoteエスクポートファイルを指定
 assert args.size() >= 1
 
+//インプット
 def evernote_file = args[0]
-
 def evernote = new XmlParser().parse(evernote_file)
+
+//アウトプット
 def atom = new groovy.xml.MarkupBuilder()
 
-def sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
 
+//XML宣言
 println '<?xml version="1.0" encoding="UTF-8"?>'
-atom.feed {
+
+//Feedタグは属性も含めて必要
+atom.feed(
+ xmlns:"http://purl.org/atom/ns#",
+ 'xml:lang':"ja",
+ 'xmlns:opensearch':"http://a9.com/-/spec/opensearchrss/1.0/",
+ 'xmlns:dc':"http://purl.org/dc/elements/1.1/",
+ 'xmlns:taxo':"http://purl.org/rss/1.0/modules/taxonomy/")
+{
     //Evernoteのnoteタグを列挙
     evernote.note.each {note ->
         entry {
-            title note.title.text()
-            link note.'note-attributes'.'source-url'.text()
+            //idはダミー用
+            id note.created.text()
 
+            title note.title.text()
+            link(type:"text/html",rel:"related",
+                href:note.'note-attributes'.'source-url'.text())
+
+            //空でも必要
+            summary ""
+
+            //ISO8601形式で登録日時指定
             def issued_date =
                 Date.parse("yyyyMMdd'T'HHmmss'Z'", note.created.text())
-            issued sdf.format(issued_date)
+            issued format.format(issued_date)
 
+            //タグを列挙
             note.tag.each {tag ->
                 'dc:subject' tag.text() 
             } 
