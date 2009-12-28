@@ -1,0 +1,36 @@
+/**
+ * EverNoteエクスポートデータを、はてブインポートデータ(ATOM)に変換する
+ */
+
+import java.text.*
+
+
+//引数からEvernoteエスクポートファイルを指定
+assert args.size() >= 1
+
+def evernote_file = args[0]
+
+def evernote = new XmlParser().parse(evernote_file)
+def atom = new groovy.xml.MarkupBuilder()
+
+def sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
+
+println '<?xml version="1.0" encoding="UTF-8"?>'
+atom.feed {
+    //Evernoteのnoteタグを列挙
+    evernote.note.each {note ->
+        entry {
+            title note.title.text()
+            link note.'note-attributes'.'source-url'.text()
+
+            def issued_date =
+                Date.parse("yyyyMMdd'T'HHmmss'Z'", note.created.text())
+            issued sdf.format(issued_date)
+
+            note.tag.each {tag ->
+                'dc:subject' tag.text() 
+            } 
+        }
+    } 
+}
+
